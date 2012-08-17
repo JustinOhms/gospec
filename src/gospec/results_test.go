@@ -15,9 +15,9 @@ func ResultsSpec(c nanospec.Context) {
 	results := newResultCollector()
 
 	c.Specify("When results have many root specs", func() {
-		results.Update(newSpecRun("RootSpec2", nil, nil, nil))
-		results.Update(newSpecRun("RootSpec1", nil, nil, nil))
-		results.Update(newSpecRun("RootSpec3", nil, nil, nil))
+		results.Update(newSpecRun("RootSpec2", func() {}, nil, nil))
+		results.Update(newSpecRun("RootSpec1", func() {}, nil, nil))
+		results.Update(newSpecRun("RootSpec3", func() {}, nil, nil))
 
 		c.Specify("then the roots are sorted alphabetically", func() {
 			c.Expect(results).Matches(ReportIs(`
@@ -25,7 +25,7 @@ func ResultsSpec(c nanospec.Context) {
 - RootSpec2
 - RootSpec3
 
-3 specs, 0 failures
+3 specs, 0 failures, 0 ignored
 `))
 		})
 	})
@@ -37,10 +37,10 @@ func ResultsSpec(c nanospec.Context) {
 		// incremented and the children's paths will be wrong.
 
 		// use names which would not sort alphabetically
-		root := newSpecRun("RootSpec", nil, nil, nil)
-		child1 := newSpecRun("one", nil, root, nil)
-		child2 := newSpecRun("two", nil, root, nil)
-		child3 := newSpecRun("three", nil, root, nil)
+		root := newSpecRun("RootSpec", func() {}, nil, nil)
+		child1 := newSpecRun("one", func() {}, root, nil)
+		child2 := newSpecRun("two", func() {}, root, nil)
+		child3 := newSpecRun("three", func() {}, root, nil)
 
 		// register in random order
 		results.Update(root)
@@ -59,41 +59,41 @@ func ResultsSpec(c nanospec.Context) {
   - two
   - three
 
-4 specs, 0 failures
+4 specs, 0 failures, 0 ignored
 `))
 		})
 	})
 
 	c.Specify("Case: zero specs", func() {
 		c.Expect(results).Matches(ReportIs(`
-0 specs, 0 failures
+0 specs, 0 failures, 0 ignored
 `))
 	})
 	c.Specify("Case: spec with no children", func() {
-		a1 := newSpecRun("RootSpec", nil, nil, nil)
+		a1 := newSpecRun("RootSpec", func() {}, nil, nil)
 		results.Update(a1)
 		c.Expect(results).Matches(ReportIs(`
 - RootSpec
 
-1 specs, 0 failures
+1 specs, 0 failures, 0 ignored
 `))
 	})
 	c.Specify("Case: spec with a child", func() {
-		a1 := newSpecRun("RootSpec", nil, nil, nil)
-		a2 := newSpecRun("Child A", nil, a1, nil)
+		a1 := newSpecRun("RootSpec", func() {}, nil, nil)
+		a2 := newSpecRun("Child A", func() {}, a1, nil)
 		results.Update(a1)
 		results.Update(a2)
 		c.Expect(results).Matches(ReportIs(`
 - RootSpec
   - Child A
 
-2 specs, 0 failures
+2 specs, 0 failures, 0 ignored
 `))
 	})
 	c.Specify("Case: spec with nested children", func() {
-		a1 := newSpecRun("RootSpec", nil, nil, nil)
-		a2 := newSpecRun("Child A", nil, a1, nil)
-		a3 := newSpecRun("Child AA", nil, a2, nil)
+		a1 := newSpecRun("RootSpec", func() {}, nil, nil)
+		a2 := newSpecRun("Child A", func() {}, a1, nil)
+		a3 := newSpecRun("Child AA", func() {}, a2, nil)
 		results.Update(a1)
 		results.Update(a2)
 		results.Update(a3)
@@ -102,7 +102,7 @@ func ResultsSpec(c nanospec.Context) {
   - Child A
     - Child AA
 
-3 specs, 0 failures
+3 specs, 0 failures, 0 ignored
 `))
 	})
 	c.Specify("Case: spec with multiple nested children", func() {
@@ -119,17 +119,17 @@ func ResultsSpec(c nanospec.Context) {
     - Child BB
     - Child BC
 
-8 specs, 0 failures
+8 specs, 0 failures, 0 ignored
 `))
 	})
 
 	c.Specify("When specs fail", func() {
-		a1 := newSpecRun("Failing", nil, nil, nil)
+		a1 := newSpecRun("Failing", func() {}, nil, nil)
 		a1.AddError(newError(OtherError, "X did not equal Y", "", []*Location{}))
 		results.Update(a1)
 
-		b1 := newSpecRun("Passing", nil, nil, nil)
-		b2 := newSpecRun("Child failing", nil, b1, nil)
+		b1 := newSpecRun("Passing", func() {}, nil, nil)
+		b2 := newSpecRun("Child failing", func() {}, b1, nil)
 		b2.AddError(newError(OtherError, "moon was not cheese", "", []*Location{}))
 		results.Update(b1)
 		results.Update(b2)
@@ -142,7 +142,7 @@ func ResultsSpec(c nanospec.Context) {
   - Child failing [FAIL]
 *** moon was not cheese
 
-3 specs, 2 failures
+3 specs, 2 failures, 0 ignored
 `))
 		})
 	})
@@ -168,7 +168,7 @@ func ResultsSpec(c nanospec.Context) {
   - Child A
   - Child B
 
-3 specs, 1 failures
+3 specs, 1 failures, 0 ignored
 `))
 		})
 	})
@@ -202,7 +202,7 @@ func ResultsSpec(c nanospec.Context) {
   - Child A
   - Child B
 
-3 specs, 1 failures
+3 specs, 1 failures, 0 ignored
 `))
 		})
 	})
@@ -239,7 +239,7 @@ func ResultsSpec(c nanospec.Context) {
     - Child A
     - Child B
 
-4 specs, 1 failures
+4 specs, 1 failures, 0 ignored
 `))
 		})
 	})
@@ -257,7 +257,7 @@ func ResultsSpec(c nanospec.Context) {
 *** type error: expected a float, but was “1” of type “int”
     at results_test.go
 
-1 specs, 1 failures
+1 specs, 1 failures, 0 ignored
 `))
 		})
 	})
@@ -281,7 +281,7 @@ func ResultsSpec(c nanospec.Context) {
     at recover_test.go
     at results_test.go
 
-2 specs, 1 failures
+2 specs, 1 failures, 0 ignored
 `))
 		})
 	})
@@ -302,7 +302,7 @@ func ResultsSpec(c nanospec.Context) {
     at recover_test.go
     at results_test.go
 
-1 specs, 1 failures
+1 specs, 1 failures, 0 ignored
 `))
 		})
 	})

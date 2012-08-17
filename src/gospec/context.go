@@ -34,6 +34,7 @@ type taskContext struct {
 	currentSpec    *specRun
 	executedSpecs  *list.List
 	postponedSpecs *list.List
+	ignoredSpecs   *list.List
 }
 
 func newInitialContext() *taskContext {
@@ -46,6 +47,7 @@ func newExplicitContext(targetPath path) *taskContext {
 	c.currentSpec = nil
 	c.executedSpecs = list.New()
 	c.postponedSpecs = list.New()
+	c.ignoredSpecs = list.New()
 	return c
 }
 
@@ -63,6 +65,8 @@ func (c *taskContext) enterSpec(name string, closure func()) {
 func (c *taskContext) processCurrentSpec() {
 	spec := c.currentSpec
 	switch {
+	case spec.closure == nil:
+		c.ignore(spec)
 	case c.shouldExecute(spec):
 		c.execute(spec)
 	case c.shouldPostpone(spec):
@@ -92,6 +96,10 @@ func (c *taskContext) execute(spec *specRun) {
 
 func (c *taskContext) postpone(spec *specRun) {
 	c.postponedSpecs.PushBack(spec)
+}
+
+func (c *taskContext) ignore(spec *specRun) {
+	c.ignoredSpecs.PushBack(spec)
 }
 
 func (c *taskContext) Expect(actual interface{}, matcher Matcher, expected ...interface{}) {

@@ -95,11 +95,15 @@ func (r *Runner) execute(name string, closure specRoot, c *taskContext) *taskRes
 		closure,
 		asSpecArray(c.executedSpecs),
 		asSpecArray(c.postponedSpecs),
+		asSpecArray(c.ignoredSpecs),
 	}
 }
 
 func (r *Runner) saveResult(result *taskResult) {
 	for _, spec := range result.executedSpecs {
+		r.executed = append(r.executed, spec)
+	}
+	for _, spec := range result.ignoredSpecs {
 		r.executed = append(r.executed, spec)
 	}
 	for _, spec := range result.postponedSpecs {
@@ -141,4 +145,5 @@ type taskResult struct {
 	closure        specRoot
 	executedSpecs  []*specRun
 	postponedSpecs []*specRun
+	ignoredSpecs   []*specRun
 }
