@@ -15,11 +15,13 @@ type ResultCollector struct {
 	rootsByName map[string]*specResult
 	passCount   int
 	failCount   int
+	ignoreCount int
 }
 
 func newResultCollector() *ResultCollector {
 	return &ResultCollector{
 		make(map[string]*specResult),
+		-1,
 		-1,
 		-1,
 	}
@@ -44,7 +46,7 @@ func (r *ResultCollector) getOrCreateRoot(spec *specRun) *specResult {
 // Number of specs
 
 func (r *ResultCollector) TotalCount() int {
-	return r.PassCount() + r.FailCount()
+	return r.PassCount() + r.FailCount() + r.IgnoreCount()
 }
 
 func (r *ResultCollector) PassCount() int {
@@ -61,6 +63,13 @@ func (r *ResultCollector) FailCount() int {
 	return r.failCount
 }
 
+func (r *ResultCollector) IgnoreCount() int {
+	if r.ignoreCount < 0 {
+		r.calculateSpecCount()
+	}
+	return r.ignoreCount
+}
+
 func (r *ResultCollector) calculateSpecCount() {
 	r.resetSpecCount()
 	r.visitAll(func(spec *specResult) {
@@ -71,11 +80,14 @@ func (r *ResultCollector) calculateSpecCount() {
 func (r *ResultCollector) resetSpecCount() {
 	r.failCount = 0
 	r.passCount = 0
+	r.ignoreCount = 0
 }
 
 func (r *ResultCollector) incrementSpecCount(spec *specResult) {
 	if spec.isFailed() {
 		r.failCount++
+	} else if spec.isIgnored() {
+		r.ignoreCount++
 	} else {
 		r.passCount++
 	}
@@ -84,17 +96,17 @@ func (r *ResultCollector) incrementSpecCount(spec *specResult) {
 // Visiting the results
 
 type ResultVisitor interface {
-	VisitSpec(nestingLevel int, name string, errors []*Error)
-	VisitEnd(passCount int, failCount int)
+	VisitSpec(nestingLevel int, name string, ignored bool, errors []*Error)
+	VisitEnd(passCount, failCount, ignoreCount int)
 }
 
 func (r *ResultCollector) Visit(visitor ResultVisitor) {
 	r.resetSpecCount()
 	r.visitAll(func(spec *specResult) {
 		r.incrementSpecCount(spec)
-		visitor.VisitSpec(len(spec.path), spec.name, listToErrorArray(spec.errors))
+		visitor.VisitSpec(len(spec.path), spec.name, spec.ignored, listToErrorArray(spec.errors))
 	})
-	visitor.VisitEnd(r.passCount, r.failCount)
+	visitor.VisitEnd(r.passCount, r.failCount, r.ignoreCount)
 }
 
 func listToErrorArray(list *list.List) []*Error {
@@ -141,6 +153,7 @@ type specResult struct {
 	path     path
 	children *list.List
 	errors   *list.List
+	ignored  bool
 }
 
 func newSpecResult(spec *specRun) *specResult {
@@ -150,11 +163,16 @@ func newSpecResult(spec *specRun) *specResult {
 		spec.path,
 		list.New(),
 		list.New(),
+		spec.closure == nil,
 	}
 }
 
 func (this *specResult) isFailed() bool {
 	return this.errors.Len() > 0
+}
+
+func (this *specResult) isIgnored() bool {
+	return this.ignored
 }
 
 func (this *specResult) visitAll(visitor func(*specResult)) {

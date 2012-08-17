@@ -46,7 +46,16 @@ func (this *Printer) ShowSummary() {
 	this.showSummary = true
 }
 
-func (this *Printer) VisitSpec(nestingLevel int, name string, errors []*Error) {
+func (this *Printer) VisitSpec(nestingLevel int, name string, isIgnored bool, errors []*Error) {
+	if isIgnored {
+		if this.show == ALL {
+			this.format.PrintIgnored(nestingLevel, name)
+		} else {
+			this.saveNotPrinted(nestingLevel, name)
+		}
+		return
+	}
+
 	isPassing := len(errors) == 0
 	isFailing := !isPassing
 
@@ -63,9 +72,9 @@ func (this *Printer) VisitSpec(nestingLevel int, name string, errors []*Error) {
 	}
 }
 
-func (this *Printer) VisitEnd(passCount int, failCount int) {
+func (this *Printer) VisitEnd(passCount, failCount, ignoreCount int) {
 	if this.showSummary {
-		this.format.PrintSummary(passCount, failCount)
+		this.format.PrintSummary(passCount, failCount, ignoreCount)
 	}
 }
 

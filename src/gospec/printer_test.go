@@ -23,17 +23,19 @@ func PrinterSpec(c nanospec.Context) {
 		p.ShowSummary()
 
 		c.Specify("then the summary is printed", func() {
-			p.VisitSpec(0, "Passing 1", noErrors)
-			p.VisitSpec(0, "Passing 2", noErrors)
-			p.VisitSpec(0, "Failing", someError)
-			p.VisitEnd(2, 1)
+			p.VisitSpec(0, "Passing 1", false, noErrors)
+			p.VisitSpec(0, "Passing 2", false, noErrors)
+			p.VisitSpec(0, "Failing", false, someError)
+			p.VisitSpec(0, "Ignored", true, noErrors)
+			p.VisitEnd(2, 1, 1)
 			c.Expect(trim(out.String())).Equals(trim(`
 - Passing 1
 - Passing 2
 - Failing [FAIL]
 *** some error
+- Ignored [IGNORED]
 
-3 specs, 1 failures
+4 specs, 1 failures, 1 ignored
 `))
 		})
 	})
@@ -42,15 +44,17 @@ func PrinterSpec(c nanospec.Context) {
 		p.HideSummary()
 
 		c.Specify("then the summary is not printed", func() {
-			p.VisitSpec(0, "Passing 1", noErrors)
-			p.VisitSpec(0, "Passing 2", noErrors)
-			p.VisitSpec(0, "Failing", someError)
-			p.VisitEnd(2, 1)
+			p.VisitSpec(0, "Passing 1", false, noErrors)
+			p.VisitSpec(0, "Passing 2", false, noErrors)
+			p.VisitSpec(0, "Failing", false, someError)
+			p.VisitSpec(0, "Ignored", true, noErrors)
+			p.VisitEnd(2, 1, 1)
 			c.Expect(trim(out.String())).Equals(trim(`
 - Passing 1
 - Passing 2
 - Failing [FAIL]
 *** some error
+- Ignored [IGNORED]
 `))
 		})
 	})
@@ -58,13 +62,15 @@ func PrinterSpec(c nanospec.Context) {
 	c.Specify("When showing all specs", func() {
 		p.ShowAll()
 
-		c.Specify("then passing and failing specs are printed", func() {
-			p.VisitSpec(0, "Passing", noErrors)
-			p.VisitSpec(0, "Failing", someError)
+		c.Specify("then passing, failing and ignored specs are printed", func() {
+			p.VisitSpec(0, "Passing", false, noErrors)
+			p.VisitSpec(0, "Failing", false, someError)
+			p.VisitSpec(0, "Ignored", true, noErrors)
 			c.Expect(trim(out.String())).Equals(trim(`
 - Passing
 - Failing [FAIL]
 *** some error
+- Ignored [IGNORED]
 `))
 		})
 	})
@@ -72,8 +78,9 @@ func PrinterSpec(c nanospec.Context) {
 		p.ShowOnlyFailing()
 
 		c.Specify("then only failing specs are printed", func() {
-			p.VisitSpec(0, "Passing", noErrors)
-			p.VisitSpec(0, "Failing", someError)
+			p.VisitSpec(0, "Passing", false, noErrors)
+			p.VisitSpec(0, "Failing", false, someError)
+			p.VisitSpec(0, "Ignored", true, noErrors)
 			c.Expect(trim(out.String())).Equals(trim(`
 - Failing [FAIL]
 *** some error
@@ -81,8 +88,8 @@ func PrinterSpec(c nanospec.Context) {
 		})
 
 		c.Specify("then the parents of failing specs are printed", func() {
-			p.VisitSpec(0, "Passing parent", noErrors)
-			p.VisitSpec(1, "Failing child", someError)
+			p.VisitSpec(0, "Passing parent", false, noErrors)
+			p.VisitSpec(1, "Failing child", false, someError)
 			c.Expect(trim(out.String())).Equals(trim(`
 - Passing parent
   - Failing child [FAIL]
@@ -91,9 +98,9 @@ func PrinterSpec(c nanospec.Context) {
 		})
 
 		c.Specify("Case: passing parent with many failing children; should print the parent only once", func() {
-			p.VisitSpec(0, "Passing parent", noErrors)
-			p.VisitSpec(1, "Failing child A", someError)
-			p.VisitSpec(1, "Failing child B", someError)
+			p.VisitSpec(0, "Passing parent", false, noErrors)
+			p.VisitSpec(1, "Failing child A", false, someError)
+			p.VisitSpec(1, "Failing child B", false, someError)
 			c.Expect(trim(out.String())).Equals(trim(`
 - Passing parent
   - Failing child A [FAIL]
@@ -104,9 +111,9 @@ func PrinterSpec(c nanospec.Context) {
 		})
 
 		c.Specify("Case: failing parent with a failing grandchild; should print the child in the middle", func() {
-			p.VisitSpec(0, "Failing parent", someError)
-			p.VisitSpec(1, "Passing child", noErrors)
-			p.VisitSpec(2, "Failing grandchild", someError)
+			p.VisitSpec(0, "Failing parent", false, someError)
+			p.VisitSpec(1, "Passing child", false, noErrors)
+			p.VisitSpec(2, "Failing grandchild", false, someError)
 			c.Expect(trim(out.String())).Equals(trim(`
 - Failing parent [FAIL]
 *** some error
@@ -117,11 +124,11 @@ func PrinterSpec(c nanospec.Context) {
 		})
 
 		c.Specify("Case: failing parent and ghosts of unrelated specs; should not print unrelated specs", func() {
-			p.VisitSpec(0, "Don't show me 0", noErrors)
-			p.VisitSpec(1, "Don't show me 1", noErrors)
-			p.VisitSpec(2, "Don't show me 2", noErrors)
-			p.VisitSpec(0, "Failing parent", someError)
-			p.VisitSpec(1, "Failing child", someError)
+			p.VisitSpec(0, "Don't show me 0", false, noErrors)
+			p.VisitSpec(1, "Don't show me 1", false, noErrors)
+			p.VisitSpec(2, "Don't show me 2", false, noErrors)
+			p.VisitSpec(0, "Failing parent", false, someError)
+			p.VisitSpec(1, "Failing child", false, someError)
 			c.Expect(trim(out.String())).Equals(trim(`
 - Failing parent [FAIL]
 *** some error

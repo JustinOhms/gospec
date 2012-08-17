@@ -12,7 +12,8 @@ import (
 type PrintFormat interface {
 	PrintPassing(nestingLevel int, name string)
 	PrintFailing(nestingLevel int, name string, errors []*Error)
-	PrintSummary(passCount int, failCount int)
+	PrintIgnored(nestingLevel int, name string)
+	PrintSummary(passCount, failCount, ignoreCount int)
 }
 
 // PrintFormat for production use.
@@ -39,6 +40,14 @@ func (this *defaultPrintFormat) PrintFailing(nestingLevel int, name string, erro
 		this.printError(error)
 	}
 	fmt.Fprint(this.out, "\n")
+}
+
+func (this *defaultPrintFormat) PrintIgnored(nestingLevel int, name string) {
+	if nestingLevel == 0 {
+		fmt.Fprintf(this.out, "\n%v [IGNORED]\n", name)
+	} else {
+		fmt.Fprintf(this.out, "%v- %v [IGNORED]\n", indent(nestingLevel), name)
+	}
 }
 
 func (this *defaultPrintFormat) printError(error *Error) {
@@ -71,10 +80,10 @@ func formatErrorMessage(e *Error) string {
 	return s
 }
 
-func (this *defaultPrintFormat) PrintSummary(passCount int, failCount int) {
-	totalCount := passCount + failCount
+func (this *defaultPrintFormat) PrintSummary(passCount, failCount, ignoreCount int) {
+	totalCount := passCount + failCount + ignoreCount
 	// TODO: use colors (red if failures, else green)
-	fmt.Fprintf(this.out, "\n%v specs, %v failures\n", totalCount, failCount)
+	fmt.Fprintf(this.out, "\n%v specs, %v failures, %v ignored\n", totalCount, failCount, ignoreCount)
 }
 
 // PrintFormat for use in only tests. Does not print line numbers, colors or
@@ -98,6 +107,10 @@ func (this *simplePrintFormat) PrintFailing(nestingLevel int, name string, error
 	}
 }
 
+func (this *simplePrintFormat) PrintIgnored(nestingLevel int, name string) {
+	fmt.Fprintf(this.out, "%v- %v [IGNORED]\n", indent(nestingLevel), name)
+}
+
 func (this *simplePrintFormat) printError(error *Error) {
 	fmt.Fprintf(this.out, formatErrorMessage(error))
 	for _, loc := range error.StackTrace {
@@ -105,9 +118,9 @@ func (this *simplePrintFormat) printError(error *Error) {
 	}
 }
 
-func (this *simplePrintFormat) PrintSummary(passCount int, failCount int) {
-	totalCount := passCount + failCount
-	fmt.Fprintf(this.out, "\n%v specs, %v failures\n", totalCount, failCount)
+func (this *simplePrintFormat) PrintSummary(passCount, failCount, ignoreCount int) {
+	totalCount := passCount + failCount + ignoreCount
+	fmt.Fprintf(this.out, "\n%v specs, %v failures, %v ignored\n", totalCount, failCount, ignoreCount)
 }
 
 func indent(level int) string {
