@@ -73,8 +73,15 @@ func formatErrorMessage(e *Error) string {
 
 func (this *defaultPrintFormat) PrintSummary(passCount int, failCount int) {
 	totalCount := passCount + failCount
-	// TODO: use colors (red if failures, else green)
-	fmt.Fprintf(this.out, "\n%v specs, %v failures\n", totalCount, failCount)
+
+	formatStr := "\n%v specs, %v failures\n"
+	if failCount > 0 {
+		formatStr = fmt.Sprintf(formatStr, "%v", "\033[31m%v\033[0m")
+	} else {
+		formatStr = fmt.Sprintf(formatStr, "\033[32m%v\033[0m", "%v")
+	}
+
+	fmt.Fprintf(this.out, formatStr, totalCount, failCount)
 }
 
 // PrintFormat for use in only tests. Does not print line numbers, colors or
